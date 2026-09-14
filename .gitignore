@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.log
+.env
+.semantic-index/
+tests/fixtures/**/.semantic-index/
+coverage/

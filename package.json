@@ -1,0 +1,36 @@
+{
+  "name": "semantic-index",
+  "version": "0.1.0",
+  "description": "Agent-agnostic semantic code search (CLI + MCP): local Ollama embeddings + tree-sitter AST-based call-graph tracing.",
+  "type": "module",
+  "license": "MIT",
+  "main": "dist/cli.js",
+  "bin": {
+    "semantic-index": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/cli.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "chokidar": "^5.0.0",
+    "commander": "^12.1.0",
+    "js-yaml": "^4.1.0",
+    "tree-sitter": "^0.21.1",
+    "tree-sitter-typescript": "^0.23.2",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.3",
+    "vitest": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

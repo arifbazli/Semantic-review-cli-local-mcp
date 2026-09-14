@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - name: Smoke-test native tree-sitter binding
+        run: node -e "const P=require('tree-sitter');const TS=require('tree-sitter-typescript').tsx;const p=new P();p.setLanguage(TS);p.parse('const x = 1;');console.log('tree-sitter-typescript OK')"
+      - run: npm run lint
+      - run: npm run build
+      # Unit tests only in CI — the e2e suite needs a local Ollama instance
+      # with nomic-embed-text pulled, which this runner doesn't have.
+      - run: npx vitest run tests/unit
