@@ -12,6 +12,8 @@ export interface ReindexStats {
   chunksEmbedded: number;
   chunksReused: number;
   chunksDeleted: number;
+  /** Chunks that failed to embed even after retries — omitted from this index, will be retried on the next reindex. */
+  chunksFailed: number;
 }
 
 /**
@@ -36,19 +38,34 @@ export async function fullReindex(dir: string, config: Config): Promise<ReindexS
   const oldIndex = readIndexFile(dir, config);
   const diff = diffChunks(oldIndex?.chunks ?? [], allNewChunks);
 
-  const embeddings =
-    diff.toEmbed.length > 0 ? await embedBatch(provider, diff.toEmbed.map((c) => c.text), config.embedding.concurrency) : [];
+  const { embeddings, failedIndexes } =
+    diff.toEmbed.length > 0
+      ? await embedBatch(provider, diff.toEmbed.map((c) => c.text), config.embedding.concurrency)
+      : { embeddings: [] as (number[] | null)[], failedIndexes: [] as number[] };
 
-  const embeddedChunks: StoredChunk[] = diff.toEmbed.map((chunk, i) => ({
-    id: chunk.id,
-    file: chunk.file,
-    functionName: chunk.functionName,
-    startLine: chunk.startLine,
-    endLine: chunk.endLine,
-    contentHash: chunk.contentHash,
-    truncated: chunk.truncated,
-    embedding: embeddings[i],
-  }));
+  if (failedIndexes.length > 0) {
+    const failedNames = failedIndexes.map((i) => `${diff.toEmbed[i].file}#${diff.toEmbed[i].functionName}`).join(", ");
+    console.error(
+      `[reindex] failed to embed ${failedIndexes.length} of ${diff.toEmbed.length} chunk(s) after retries — will retry on next reindex: ${failedNames}`,
+    );
+  }
+
+  const embeddedChunks: StoredChunk[] = diff.toEmbed.flatMap((chunk, i) => {
+    const embedding = embeddings[i];
+    if (!embedding) return [];
+    return [
+      {
+        id: chunk.id,
+        file: chunk.file,
+        functionName: chunk.functionName,
+        startLine: chunk.startLine,
+        endLine: chunk.endLine,
+        contentHash: chunk.contentHash,
+        truncated: chunk.truncated,
+        embedding,
+      },
+    ];
+  });
 
   const dimensions = embeddedChunks[0]?.embedding.length ?? oldIndex?.dimensions ?? 0;
   writeIndexFile(dir, config, {
@@ -65,8 +82,9 @@ export async function fullReindex(dir: string, config: Config): Promise<ReindexS
   return {
     filesScanned: projectFiles.files.size,
     functionsFound: callGraph.functions.size,
-    chunksEmbedded: diff.toEmbed.length,
+    chunksEmbedded: embeddedChunks.length,
     chunksReused: diff.toKeep.length,
     chunksDeleted: diff.toDeleteIds.size,
+    chunksFailed: failedIndexes.length,
   };
 }

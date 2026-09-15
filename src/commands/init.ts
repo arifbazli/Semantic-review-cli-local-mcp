@@ -23,4 +23,7 @@ export async function runInit(dirArg: string, opts: InitOptions): Promise<void> 
   const stats = await fullReindex(dir, config);
   console.log(`Scanned ${stats.filesScanned} files, found ${stats.functionsFound} functions.`);
   console.log(`Embedded ${stats.chunksEmbedded} chunks (reused ${stats.chunksReused} unchanged, removed ${stats.chunksDeleted}).`);
+  if (stats.chunksFailed > 0) {
+    console.log(`${stats.chunksFailed} chunk(s) failed to embed after retries — see errors above; they'll be retried next run.`);
+  }
 }

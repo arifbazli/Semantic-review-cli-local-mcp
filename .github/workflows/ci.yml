@@ -24,4 +24,4 @@ jobs:
       - run: npm run build
       # Unit tests only in CI — the e2e suite needs a local Ollama instance
       # with nomic-embed-text pulled, which this runner doesn't have.
-      - run: npx vitest run tests/unit
+      - run: npm test

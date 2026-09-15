@@ -63,16 +63,16 @@ semantic-index mcp                             # same engine, as an MCP server o
 
 ## Status
 
-Proof of concept. 30 tests, all passing, no mocks:
-- **20 unit tests** — no external dependencies, this is what CI runs.
-- **10 e2e tests** — make real calls to a local Ollama instance and spawn the built CLI as an actual MCP subprocess. One of these tests indexes a sibling repo (`../semantic-code-review`) for an embedding-quality check; it will fail if that repo isn't checked out next to this one.
+Proof of concept. 44 tests, all passing, no mocks:
+- **34 unit tests** — no external dependencies; `npm test` and CI both run exactly this.
+- **10 e2e tests** (`npm run test:e2e`) — make real calls to a local Ollama instance and spawn the built CLI as an actual MCP subprocess. One of these tests indexes a sibling repo (`../semantic-code-review`) for an embedding-quality check and is skipped with a clear message if that repo isn't checked out next to this one.
 
 ## Known limits
 
-- Brute-force cosine similarity over every stored chunk — no vector index. Fine at the scale this has been tested at; untested at large scale.
-- Call resolution is name/import-based, not points-to analysis. Dynamic dispatch, higher-order calls, and barrel re-exports aren't resolved (they land in `unresolved`, not silently dropped).
-- `nomic-embed-text` separates unrelated domains well (a basket-vs-address query on real OWASP Juice Shop routes scores >0.5 for the right function) but is measurably weaker at ranking one specific helper among many similar ones in the same file (in one measured case, a targeted query ranked the right function outside the top 10 of 47 candidates). See `tests/e2e/search.e2e.test.ts`.
-- `watch` re-parses the whole directory on each change (only re-embeds what changed) — no daemon/service wrapper, and indexing stops when the process exits.
+- **No vector index** — brute-force cosine similarity over every stored chunk. Fine at tested scale; untested at large scale.
+- **Name/import-based call resolution, not points-to analysis** — dynamic dispatch, higher-order calls, and barrel re-exports land in `unresolved` rather than being resolved (never silently dropped).
+- **Weaker same-file ranking** — `nomic-embed-text` cleanly separates unrelated domains (>0.5 score) but is measurably worse at ranking one helper among many similar ones in the same file. See `tests/e2e/search.e2e.test.ts`.
+- **No daemon** — `watch` re-parses the whole directory per change (re-embeds only what changed) and stops indexing when the process exits.
 
 Full design rationale, including two real bugs found and fixed while validating this against ground-truth fixtures (anonymous functions invisible as callers; double-counted calls across nested callbacks), is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 

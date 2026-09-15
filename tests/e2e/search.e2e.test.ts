@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { rmSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
 import { writeDefaultConfig } from "../../src/config/loader.js";
 import { fullReindex } from "../../src/indexer/reindex.js";
@@ -36,9 +36,15 @@ describe("searchIndex — live Ollama, real ranking quality", () => {
   }, 30_000);
 });
 
-describe("searchIndex — live Ollama, embedding-quality check on semantic-code-review's own source", () => {
-  const semanticCodeReviewSrc = resolve(FIXTURES_DIR, "../../..", "semantic-code-review", "src", "taint");
+const semanticCodeReviewSrc = resolve(FIXTURES_DIR, "../../..", "semantic-code-review", "src", "taint");
+// This test depends on a *different* sibling repo, also named semantic-code-review, checked out
+// next to this one — not just "Ollama running". Skip with a clear reason instead of failing on an
+// unrelated "function not found" assertion when that sibling checkout isn't present.
+if (!existsSync(semanticCodeReviewSrc)) {
+  console.warn(`[e2e] skipping embedding-quality check — sibling repo not found at ${semanticCodeReviewSrc}`);
+}
 
+describe.skipIf(!existsSync(semanticCodeReviewSrc))("searchIndex — live Ollama, embedding-quality check on semantic-code-review's own source", () => {
   beforeAll(async () => {
     const config = writeDefaultConfig(semanticCodeReviewSrc);
     await fullReindex(semanticCodeReviewSrc, config);

@@ -28,8 +28,20 @@ export async function searchIndex(dir: string, query: string, topK = 8): Promise
   const index = readIndexFile(dir, config);
   if (!index || index.chunks.length === 0) return [];
 
+  if (index.model !== config.model) {
+    throw new Error(
+      `Index at ${dir} was built with model "${index.model}" but the current config specifies "${config.model}" — cosine similarity across two different embedding spaces is meaningless. Run "semantic-index init --force" to re-index with the current model.`,
+    );
+  }
+
   const provider = new OllamaProvider(config.ollama.baseUrl, config.model);
   const queryEmbedding = await provider.embed(query);
+
+  if (index.dimensions > 0 && queryEmbedding.length !== index.dimensions) {
+    throw new Error(
+      `Query embedding has ${queryEmbedding.length} dimensions but the index was built with ${index.dimensions}-dimension embeddings — run "semantic-index init --force" to re-index.`,
+    );
+  }
 
   const scored = index.chunks
     .map((chunk) => ({ chunk, score: cosineSimilarity(queryEmbedding, chunk.embedding) }))
