@@ -63,15 +63,15 @@ semantic-index mcp                             # same engine, as an MCP server o
 
 ## Status
 
-Proof of concept. 44 tests, all passing, no mocks:
-- **34 unit tests** — no external dependencies; `npm test` and CI both run exactly this.
+Proof of concept. 54 tests, all passing, no mocks:
+- **44 unit tests** — no external dependencies; `npm test` and CI both run exactly this.
 - **10 e2e tests** (`npm run test:e2e`) — make real calls to a local Ollama instance and spawn the built CLI as an actual MCP subprocess. One of these tests indexes a sibling repo (`../semantic-code-review`) for an embedding-quality check and is skipped with a clear message if that repo isn't checked out next to this one.
 
 ## Known limits
 
-- **No vector index** — brute-force cosine similarity over every stored chunk. Fine at tested scale; untested at large scale.
+- **No vector index** — still a brute-force scan of every stored chunk, no ANN structure. Embeddings are normalized to unit length at index-build time so each query does one dot product per chunk instead of full cosine math; untested at large scale.
 - **Name/import-based call resolution, not points-to analysis** — dynamic dispatch, higher-order calls, and barrel re-exports land in `unresolved` rather than being resolved (never silently dropped).
-- **Weaker same-file ranking** — `nomic-embed-text` cleanly separates unrelated domains (>0.5 score) but is measurably worse at ranking one helper among many similar ones in the same file. See `tests/e2e/search.e2e.test.ts`.
+- **Weaker same-file ranking** — `nomic-embed-text` cleanly separates unrelated domains (>0.5 score) but is measurably worse at ranking one helper among many similar ones in the same file. Search blends in a small function-name/query word-overlap boost to help (see `src/search/lexical.ts`) — a nudge, not a fix; the underlying model limitation is unchanged. See `tests/e2e/search.e2e.test.ts`.
 - **No daemon** — `watch` re-parses the whole directory per change (re-embeds only what changed) and stops indexing when the process exits.
 
 Full design rationale, including two real bugs found and fixed while validating this against ground-truth fixtures (anonymous functions invisible as callers; double-counted calls across nested callbacks), is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).

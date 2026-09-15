@@ -19,6 +19,8 @@ export interface IndexFile {
   provider: string;
   model: string;
   dimensions: number;
+  /** True when every chunk's embedding has been scaled to unit length (see indexer/reindex.ts) — lets search skip re-deriving each chunk's norm on every query. Absent/false on indexes written before this field existed; search falls back to full cosine similarity for those. */
+  normalized: boolean;
   chunks: StoredChunk[];
 }
 

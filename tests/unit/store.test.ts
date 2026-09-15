@@ -30,6 +30,7 @@ describe("index file round-trip", () => {
       provider: "ollama",
       model: "nomic-embed-text",
       dimensions: 3,
+      normalized: true,
       chunks: [
         { id: "a", file: "f.ts", functionName: "f", startLine: 1, endLine: 2, contentHash: "h1", truncated: false, embedding: [1, 2, 3] },
       ],

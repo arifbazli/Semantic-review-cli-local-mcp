@@ -2,7 +2,11 @@ import { readFileSync } from "node:fs";
 import { loadConfig } from "../config/loader.js";
 import { OllamaProvider } from "../embeddings/ollama.js";
 import { readIndexFile } from "../indexer/store.js";
-import { cosineSimilarity } from "./cosine.js";
+import { cosineSimilarity, cosineSimilarityUnitB, vectorNorm } from "./cosine.js";
+import { functionNameOverlap } from "./lexical.js";
+
+/** Small nudge, not a replacement for cosine similarity — see functionNameOverlap. */
+const LEXICAL_BOOST_WEIGHT = 0.1;
 
 export interface SearchResult {
   file: string;
@@ -43,8 +47,15 @@ export async function searchIndex(dir: string, query: string, topK = 8): Promise
     );
   }
 
+  const queryNorm = vectorNorm(queryEmbedding);
   const scored = index.chunks
-    .map((chunk) => ({ chunk, score: cosineSimilarity(queryEmbedding, chunk.embedding) }))
+    .map((chunk) => {
+      const cosine = index.normalized
+        ? cosineSimilarityUnitB(queryEmbedding, queryNorm, chunk.embedding)
+        : cosineSimilarity(queryEmbedding, chunk.embedding);
+      const lexicalBoost = LEXICAL_BOOST_WEIGHT * functionNameOverlap(query, chunk.functionName);
+      return { chunk, score: cosine + lexicalBoost };
+    })
     .sort((a, b) => b.score - a.score)
     .slice(0, topK);
 

@@ -1,6 +1,7 @@
 import { buildCallGraph } from "../callgraph/graph.js";
 import type { Config } from "../config/schema.js";
 import { embedBatch, OllamaProvider } from "../embeddings/ollama.js";
+import { normalizeVector } from "../search/cosine.js";
 import { chunkFile, type Chunk } from "./chunk.js";
 import { diffChunks } from "./diff.js";
 import { buildProjectFiles } from "./pipeline.js";
@@ -68,12 +69,21 @@ export async function fullReindex(dir: string, config: Config): Promise<ReindexS
   });
 
   const dimensions = embeddedChunks[0]?.embedding.length ?? oldIndex?.dimensions ?? 0;
+  // Renormalize every chunk (both carried-over and freshly embedded) to unit length on every
+  // write — cheap relative to the embedding calls, and guarantees `normalized: true` is never a
+  // lie even if `toKeep` chunks came from a pre-normalization index. Idempotent for chunks that
+  // are already unit-length.
+  const normalizedChunks: StoredChunk[] = [...diff.toKeep, ...embeddedChunks].map((chunk) => ({
+    ...chunk,
+    embedding: normalizeVector(chunk.embedding),
+  }));
   writeIndexFile(dir, config, {
     version: 1,
     provider: config.provider,
     model: config.model,
     dimensions,
-    chunks: [...diff.toKeep, ...embeddedChunks],
+    normalized: true,
+    chunks: normalizedChunks,
   });
 
   const callGraph = buildCallGraph(projectFiles);
